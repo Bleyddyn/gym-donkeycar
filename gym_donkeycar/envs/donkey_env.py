@@ -31,20 +31,29 @@ class DonkeyEnv(gym.Env):
     THROTTLE_MAX = 5.0
     VAL_PER_PIXEL = 255
 
-    def __init__(self, level=0, exe_path="self_start", host='127.0.0.1', port=9091, frame_skip=2, start_delay=5.0, cam_resolution=(120,160,3)):
-        print("starting DonkeyGym env")
+    def __init__(self, level=0, exe_path="self_start", host='127.0.0.1', port=9091, frame_skip=2, start_delay=5.0, start_sim=True, cam_resolution=(120, 160, 3)):
 
-        # start Unity simulation subprocess
-        self.proc = DonkeyUnityProcess()
+        self.proc = None
+        self.viewer = None
 
-        # the unity sim server will bind to the host ip given
-        self.proc.start(exe_path, host='0.0.0.0', port=port)
+        if start_sim:
+            print("starting DonkeyGym env")
 
-        # wait for simulator to startup and begin listening
-        time.sleep(start_delay)
+            # start Unity simulation subprocess
+            self.proc = DonkeyUnityProcess()
 
-        # start simulation com
-        self.viewer = DonkeyUnitySimContoller(level=level, host=host, port=port, cam_resolution=cam_resolution)
+            # the unity sim server will bind to the host ip given
+            self.proc.start(exe_path, host='0.0.0.0', port=port)
+
+            # wait for simulator to startup and begin listening
+            time.sleep(start_delay)
+
+        try:
+            # start simulation com
+            self.viewer = DonkeyUnitySimContoller(level=level, host=host, port=port, cam_resolution=cam_resolution)
+        except ConnectionRefusedError as ex:
+            print( "Failed to connect to the DonkeyCar Simulator" )
+            raise
 
         # steering and throttle
         self.action_space = spaces.Box(low=np.array([self.STEER_LIMIT_LEFT, self.THROTTLE_MIN]),
@@ -71,8 +80,10 @@ class DonkeyEnv(gym.Env):
         self.close()
 
     def close(self):
-        self.viewer.quit()
-        self.proc.quit()
+        if self.viewer is not None:
+            self.viewer.quit()
+        if self.proc is not None:
+            self.proc.quit()
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
