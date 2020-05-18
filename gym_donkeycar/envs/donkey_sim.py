@@ -96,6 +96,8 @@ class DonkeyUnitySimHandler(IMesgHandler):
                     "scene_selection_ready": self.on_scene_selection_ready,
                     "scene_names": self.on_recv_scene_names,
                     "car_loaded": self.on_car_loaded,
+                    "cross_start": self.on_cross_start,
+                    "ping": self.on_ping,
                     "aborted": self.on_abort}
 
     def on_connect(self, client):
@@ -204,6 +206,15 @@ class DonkeyUnitySimHandler(IMesgHandler):
 
         self.determine_episode_over()
 
+    def on_cross_start(self, data):
+        logger.info(f"crossed start line: lap_time {data['lap_time']}")
+
+    def on_ping(self, message):
+        '''
+        no reply needed at this point. Server sends these as a keep alive to make sure clients haven't gone away.
+        '''
+        pass
+
     def determine_episode_over(self):
         # we have a few initial frames on start that are sometimes very large CTE when it's behind
         # the path just slightly. We ignore those.
@@ -228,6 +239,7 @@ class DonkeyUnitySimHandler(IMesgHandler):
         if data:
             names = data['scene_names']
             logger.debug(f"SceneNames: {names}")
+            print("loading scene", self.iSceneToLoad, names[self.iSceneToLoad])
             self.send_load_scene(names[self.iSceneToLoad])
 
     def send_control(self, steer, throttle):
